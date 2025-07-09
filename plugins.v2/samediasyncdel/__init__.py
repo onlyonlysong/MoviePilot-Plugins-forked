@@ -30,7 +30,7 @@ class SaMediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.7"
     # 插件作者
     plugin_author = "DDSRem,thsrite"
     # 作者主页
@@ -799,12 +799,13 @@ class SaMediaSyncDel(_PluginBase):
         """
         判断路径是否包含
         """
-        full = Path(full_path).parts
-        prefix = Path(prefix_path).parts
+        full_path_normalized = str(full_path).replace('\\', '/')
+        prefix_path_normalized = str(prefix_path).replace('\\', '/')
+        full = Path(full_path_normalized).parts
+        prefix = Path(prefix_path_normalized).parts
 
         if len(prefix) > len(full):
             return False
-
         return full[: len(prefix)] == prefix
 
     def __get_local_media_path(self, media_path):
@@ -973,9 +974,9 @@ class SaMediaSyncDel(_PluginBase):
             # 处理路径映射
             if self._local_library_path:
                 _, sub_paths = self.__get_local_media_path(media_path)
-                media_path = media_path.replace(sub_paths[0], sub_paths[1]).replace(
-                    "\\", "/"
-                )
+                media_path_normalized = media_path.replace("\\", "/")
+                sub_paths_normalized = [sub_path.replace("\\", "/") for sub_path in sub_paths]
+                media_path = media_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[1])
 
             # 兼容重新整理的场景
             if Path(media_path).exists():
@@ -1064,12 +1065,10 @@ class SaMediaSyncDel(_PluginBase):
             mp_media_path: Path
             if self._p115_library_path:
                 _, sub_paths = self.__get_p115_media_path(media_path)
-                mp_media_path = media_path.replace(sub_paths[0], sub_paths[1]).replace(
-                    "\\", "/"
-                )
-                media_path = media_path.replace(sub_paths[0], sub_paths[2]).replace(
-                    "\\", "/"
-                )
+                media_path_normalized = media_path.replace("\\", "/")
+                sub_paths_normalized = [sub_path.replace("\\", "/") for sub_path in sub_paths]
+                mp_media_path = media_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[1])
+                media_path = media_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[2])
 
             if Path(media_path).suffix:
                 # 自动替换媒体文件后缀名称为真实名称
@@ -1207,12 +1206,10 @@ class SaMediaSyncDel(_PluginBase):
             mp_media_path: Path
             if self._p123_library_path:
                 _, sub_paths = self.__get_p123_media_path(media_path)
-                mp_media_path = media_path.replace(sub_paths[0], sub_paths[1]).replace(
-                    "\\", "/"
-                )
-                media_path = media_path.replace(sub_paths[0], sub_paths[2]).replace(
-                    "\\", "/"
-                )
+                media_path_normalized = media_path.replace("\\", "/")
+                sub_paths_normalized = [sub_path.replace("\\", "/") for sub_path in sub_paths]
+                mp_media_path = media_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[1])
+                media_path = media_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[2])
 
             if Path(media_path).suffix:
                 # 自动替换媒体文件后缀名称为真实名称
@@ -1485,7 +1482,9 @@ class SaMediaSyncDel(_PluginBase):
         115网盘 遍历文件夹获取媒体文件后缀
         """
         _, sub_paths = self.__get_p115_media_path(file_path)
-        file_path = file_path.replace(sub_paths[0], sub_paths[2]).replace("\\", "/")
+        file_path_normalized = file_path.replace("\\", "/")
+        sub_paths_normalized = [sub_path.replace("\\", "/") for sub_path in sub_paths]
+        file_path = file_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[2])
         file_dir = Path(file_path).parent
         file_basename = Path(file_path).stem
         file_dir_fileitem = self._storagechain.get_file_item(
@@ -1501,7 +1500,9 @@ class SaMediaSyncDel(_PluginBase):
         123云盘 遍历文件夹获取媒体文件后缀
         """
         _, sub_paths = self.__get_p123_media_path(file_path)
-        file_path = file_path.replace(sub_paths[0], sub_paths[2]).replace("\\", "/")
+        file_path_normalized = file_path.replace("\\", "/")
+        sub_paths_normalized = [sub_path.replace("\\", "/") for sub_path in sub_paths]
+        file_path = file_path_normalized.replace(sub_paths_normalized[0], sub_paths_normalized[2])
         file_dir = Path(file_path).parent
         file_basename = Path(file_path).stem
         file_dir_fileitem = self._storagechain.get_file_item(
