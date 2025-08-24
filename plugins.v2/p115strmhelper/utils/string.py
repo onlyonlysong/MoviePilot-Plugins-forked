@@ -1,3 +1,9 @@
+import re
+from urllib.parse import urlparse, urlunparse, quote, parse_qs, urlencode
+
+from ..core.i18n import i18n
+
+
 class StringUtils:
     """
     类型转换辅助类
@@ -39,3 +45,62 @@ class StringUtils:
             "9": "⑨",
         }
         return "".join(emoji_map.get(digit, digit) for digit in str(n))
+
+    @staticmethod
+    def replace_markdown_with_space(text: str) -> str:
+        """
+        将字符串中所有常见的 Markdown 特殊字符替换为空格
+
+        :param text: 需要处理的带md特殊字符的文案
+        """
+        if not isinstance(text, str):
+            return ""
+
+        # 需要处理的字符串，必须字符：` * [ ]
+        md_chars_list = ["*", "[", "]", "`", "."]
+
+        # 修剪特殊字符
+        for char in md_chars_list:
+            if char == ".":
+                text = text.replace(char, "·")
+            else:
+                text = text.replace(char, " ")
+
+        # 整合连续空格
+        normalized_text = re.sub(r"\s+", " ", text)
+
+        return normalized_text.strip()
+
+    @staticmethod
+    def media_type_i18n(media_type: str) -> str:
+        """
+        媒体类型
+        """
+        if media_type == "movie":
+            return i18n.translate("media_type_movie")
+        elif media_type == "tv":
+            return i18n.translate("media_type_tv")
+        return i18n.translate("media_type_collection")
+
+    @staticmethod
+    def encode_url_fully(url: str) -> str:
+        """
+        编码标准 URL
+        """
+        try:
+            parsed_url = urlparse(url)
+            encoded_path = quote(parsed_url.path, safe="/")
+            query_dict = parse_qs(parsed_url.query, keep_blank_values=True)
+            encoded_query = urlencode(query_dict, doseq=True)
+            encoded_fragment = quote(parsed_url.fragment)
+            encoded_url_parts = (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                encoded_path,
+                parsed_url.params,
+                encoded_query,
+                encoded_fragment,
+            )
+            return urlunparse(encoded_url_parts)
+        except Exception:
+            return url

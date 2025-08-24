@@ -9,12 +9,14 @@ from orjson import dumps, loads
 from p115rsacipher import encrypt, decrypt
 
 from app.log import logger
-from app.core.config import settings
 
+from ..core.config import configer
 from ..utils.http import check_response
 from ..utils.url import Url
+from ..utils.sentry import sentry_manager
 
 
+@sentry_manager.capture_all_class_exceptions
 class MediaInfoDownloader:
     """
     媒体信息文件下载器
@@ -22,6 +24,14 @@ class MediaInfoDownloader:
 
     def __init__(self, cookie: str):
         self.cookie = cookie
+        self.headers = {
+            "User-Agent": configer.get_user_agent(),
+            "Cookie": self.cookie,
+        }
+
+        self.stop_all_flag = None
+
+        logger.debug(f"【媒体信息文件下载】初始化请求头：{self.headers}")
 
     @staticmethod
     def is_file_leq_1k(file_path):
@@ -40,11 +50,10 @@ class MediaInfoDownloader:
         resp = requests.post(
             "http://proapi.115.com/android/2.0/ufile/download",
             data={"data": encrypt(f'{{"pick_code":"{pickcode}"}}').decode("utf-8")},
-            headers={
-                "User-Agent": settings.USER_AGENT,
-                "Cookie": self.cookie,
-            },
+            headers=self.headers,
         )
+        if resp.status_code == 403:
+            self.stop_all_flag = True
         check_response(resp)
         json = loads(cast(bytes, resp.content))
         if not json["state"]:
@@ -62,11 +71,10 @@ class MediaInfoDownloader:
             download_url,
             stream=True,
             timeout=30,
-            headers={
-                "User-Agent": settings.USER_AGENT,
-                "Cookie": self.cookie,
-            },
+            headers=self.headers,
         ) as response:
+            if response.status_code == 403:
+                self.stop_all_flag = True
             response.raise_for_status()
             with open(file_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
@@ -103,11 +111,10 @@ class MediaInfoDownloader:
         resp = requests.post(
             "http://proapi.115.com/app/share/downurl",
             data={"data": encrypt(dumps(payload)).decode("utf-8")},
-            headers={
-                "User-Agent": settings.USER_AGENT,
-                "Cookie": self.cookie,
-            },
+            headers=self.headers,
         )
+        if resp.status_code == 403:
+            self.stop_all_flag = True
         check_response(resp)
         json = loads(cast(bytes, resp.content))
         if not json["state"]:
@@ -134,12 +141,23 @@ class MediaInfoDownloader:
         """
         根据列表自动下载
         """
+        self.stop_all_flag = False
         mediainfo_count: int = 0
         mediainfo_fail_count: int = 0
         mediainfo_fail_dict: List = []
+        stop_all_msg_flag = True
         try:
             for item in downloads_list:
                 if not item:
+                    continue
+                if self.stop_all_flag is True:
+                    if stop_all_msg_flag:
+                        logger.error(
+                            "【媒体信息文件下载】触发风控，停止所有媒体信息文件下载"
+                        )
+                        stop_all_msg_flag = False
+                    mediainfo_fail_count += 1
+                    mediainfo_fail_dict.append(item["path"])
                     continue
                 download_success = False
                 if item["type"] == "local":
