@@ -94,7 +94,6 @@
         "version": "2.0.34",
         "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Frontend/refs/heads/v2/src/assets/images/misc/u115.png",
         "author": "DDSRem",
-        "release": true,
         "level": 1,
         "history": {
             "v2.0.34": "修复增量同步，全量同步，媒体刮削已知问题【错误数据来自于Sentry】",
